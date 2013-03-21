@@ -1,10 +1,7 @@
 node["collectd"]["plugins"].each_pair do |plugin_key, definition|
   # Graphite auto-discovery
   if plugin_key.to_s == "write_graphite"
-    if node["collectd"]["graphite_ipaddress"].empty?
-      if Chef::Config[:solo]
-        Chef::Application.fatal!("Graphite plugin enabled but no Graphite server configured.")
-      end
+    if node["collectd"]["graphite_ipaddress"].empty? && !Chef::Config[:solo]
       graphite_server_results = search(:node, "roles:#{node["collectd"]["graphite_role"]} AND chef_environment:#{node.chef_environment}")
 
       if graphite_server_results.empty?
@@ -12,10 +9,10 @@ node["collectd"]["plugins"].each_pair do |plugin_key, definition|
       else
         definition["config"]["Host"] = graphite_server_results[0]["ipaddress"]
       end
-    else
+    elsif definition["config"]["Host"].empty?
       definition["config"]["Host"] = node["collectd"]["graphite_ipaddress"]
     end
-    definition["config"]["Port"] = 2003
+    definition["config"]["Port"] = 2003 if definition["config"]["Port"].empty?
   end
 
   collectd_plugin plugin_key.to_s do
